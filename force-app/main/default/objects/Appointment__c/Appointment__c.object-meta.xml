@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Appointment__c</fullName>
+    <label>Appointment</label>
+    <pluralLabel>Appointments</pluralLabel>
+    <nameField>
+        <label>Appointment Name</label>
+        <type>Text</type>
+    </nameField>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <sharingModel>ReadWrite</sharingModel>
+
+    <!-- Pola -->
+    <fields>
+        <fullName>Patient__c</fullName>
+        <label>Patient</label>
+        <type>Lookup</type>
+        <referenceTo>Patient__c</referenceTo>
+        <relationshipName>PatientAppointments</relationshipName>
+    </fields>
+
+    <fields>
+        <fullName>Practitioner__c</fullName>
+        <label>Practitioner</label>
+        <type>Lookup</type>
+        <referenceTo>User</referenceTo>
+        <relationshipName>PractitionerAppointments</relationshipName>
+    </fields>
+
+    <fields>
+        <fullName>Start__c</fullName>
+        <label>Start Time</label>
+        <type>DateTime</type>
+    </fields>
+
+    <fields>
+        <fullName>End__c</fullName>
+        <label>End Time</label>
+        <type>DateTime</type>
+    </fields>
+
+    <fields>
+        <fullName>Status__c</fullName>
+        <label>Status</label>
+        <type>Picklist</type>
+        <valueSet>
+            <valueSetDefinition>
+                <value>
+                    <fullName>Booked</fullName>
+                    <default>false</default>
+                </value>
+                <value>
+                    <fullName>Fulfilled</fullName>
+                    <default>false</default>
+                </value>
+                <value>
+                    <fullName>Cancelled</fullName>
+                    <default>false</default>
+                </value>
+                <value>
+                    <fullName>No-Show</fullName>
+                    <default>false</default>
+                </value>
+            </valueSetDefinition>
+        </valueSet>
+    </fields>
+
+    <fields>
+        <fullName>VideoJoinUrl__c</fullName>
+        <label>Video Join URL</label>
+        <type>Text</type>
+        <length>255</length>
+    </fields>
+
+    <fields>
+        <fullName>ExternalMeetingId__c</fullName>
+        <label>External Meeting ID</label>
+        <type>Text</type>
+        <length>255</length>
+    </fields>
+
+    <fields>
+        <fullName>Timezone__c</fullName>
+        <label>Timezone</label>
+        <type>Text</type>
+        <length>50</length>
+    </fields>
+
+    <fields>
+        <fullName>Notes__c</fullName>
+        <label>Notes</label>
+        <type>LongTextArea</type>
+        <length>256</length>
+        <visibleLines>3</visibleLines>
+    </fields>
+
+    <!-- Zgoda pacjenta na wizytę -->
+    <fields>
+        <fullName>ConsentRequired__c</fullName>
+        <label>Consent Required</label>
+        <type>Checkbox</type>
+        <defaultValue>false</defaultValue>
+    </fields>
+
+    <!-- Logowanie i audyt -->
+    <fields>
+        <fullName>CreatedByRole__c</fullName>
+        <label>Created By Role</label>
+        <type>Text</type>
+        <length>100</length>
+    </fields>
+
+    <fields>
+        <fullName>LastModifiedBy__c</fullName>
+        <label>Last Modified By</label>
+        <type>Lookup</type>
+        <referenceTo>User</referenceTo>
+        <relationshipName>LastModifiedAppointments</relationshipName>
+    </fields>
+</CustomObject>
