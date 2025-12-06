@@ -153,12 +153,12 @@
     <enableSharing>true</enableSharing>
     <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>Private</externalSharingModel>
-    <label>Appointment</label>
+    <label>Consent</label>
     <nameField>
-        <label>Appointment Name</label>
+        <label>Consent Name</label>
         <type>Text</type>
     </nameField>
-    <pluralLabel>Appointments</pluralLabel>
+    <pluralLabel>Consents</pluralLabel>
     <searchLayouts></searchLayouts>
     <sharingModel>ReadWrite</sharingModel>
     <visibility>Public</visibility>
