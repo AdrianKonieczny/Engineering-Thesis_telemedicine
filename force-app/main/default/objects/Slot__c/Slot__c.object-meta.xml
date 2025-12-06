@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Slot__c</fullName>
+    <label>Slot</label>
+    <pluralLabel>Slots</pluralLabel>
+    <nameField>
+        <label>Slot Name</label>
+        <type>Text</type>
+    </nameField>
+    <deploymentStatus>Deployed</deploymentStatus>
+    <sharingModel>ReadWrite</sharingModel>
+
+   
+    <fields>
+        <fullName>Practitioner__c</fullName>
+        <label>Practitioner</label>
+        <type>Lookup</type>
+        <referenceTo>User</referenceTo> 
+        <relationshipName>PractitionerSlots</relationshipName>
+    </fields>
+
+    <fields>
+        <fullName>Start__c</fullName>
+        <label>Start Time</label>
+        <type>DateTime</type>
+    </fields>
+
+    <fields>
+        <fullName>End__c</fullName>
+        <label>End Time</label>
+        <type>DateTime</type>
+    </fields>
+
+    <fields>
+        <fullName>IsBlocked__c</fullName>
+        <label>Is Blocked</label>
+        <type>Checkbox</type>
+        <defaultValue>false</defaultValue>
+    </fields>
+
+    <fields>
+        <fullName>Capacity__c</fullName>
+        <label>Capacity</label>
+        <type>Number</type>
+        <precision>2</precision>
+        <scale>0</scale>
+    </fields>
+
+    <fields>
+        <fullName>Reason__c</fullName>
+        <label>Reason</label>
+        <type>Text</type>
+        <length>255</length>
+    </fields>
+
+    <fields>
+        <fullName>Timezone__c</fullName>
+        <label>Timezone</label>
+        <type>Text</type>
+        <length>50</length>
+    </fields>
+
+    <fields>
+        <fullName>Availability__c</fullName>
+        <label>Availability</label>
+        <type>Lookup</type>
+        <referenceTo>Availability__c</referenceTo>
+        <relationshipName>SlotAvailability</relationshipName>
+    </fields>
+
+</CustomObject>
