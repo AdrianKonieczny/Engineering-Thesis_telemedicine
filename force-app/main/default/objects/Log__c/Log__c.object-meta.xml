@@ -153,12 +153,12 @@
     <enableSharing>true</enableSharing>
     <enableStreamingApi>true</enableStreamingApi>
     <externalSharingModel>Private</externalSharingModel>
-    <label>Slot</label>
+    <label>Log Entry</label>
     <nameField>
-        <label>Slot Name</label>
+        <label>Log Entry Name</label>
         <type>Text</type>
     </nameField>
-    <pluralLabel>Slots</pluralLabel>
+    <pluralLabel>Log Entries</pluralLabel>
     <searchLayouts></searchLayouts>
     <sharingModel>ReadWrite</sharingModel>
     <visibility>Public</visibility>
