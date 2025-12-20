@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ValidationRule xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>PESEL_VALIDATION</fullName>
+    <active>true</active>
+    <errorConditionFormula>AND(
+    /* Sprawdzamy tylko, jeśli PESEL jest podany */
+    NOT(ISBLANK(PESEL__c)),
+
+    OR(
+        /* 1) PESEL nie ma 11 cyfr */
+        NOT( REGEX(PESEL__c, &quot;[0-9]{11}&quot;) ),
+
+        /* 2) Brak daty urodzenia – nie da się zweryfikować */
+        ISBLANK(Date_of_Birth__c),
+
+        /* 3) Rok urodzenia ≠ YY z PESEL */
+        LEFT(PESEL__c, 2) &lt;&gt;
+        RIGHT( TEXT( YEAR(Date_of_Birth__c) ), 2),
+
+        /* 4) Miesiąc urodzenia ≠ MM z PESEL (z uwzględnieniem stulecia) */
+        MID(PESEL__c, 3, 2) &lt;&gt;
+        CASE(
+            FLOOR( YEAR(Date_of_Birth__c) / 100 ),
+            18, RIGHT( &quot;00&quot; &amp; TEXT( MONTH(Date_of_Birth__c) + 80 ), 2 ), /* 1800–1899 */
+            19, RIGHT( &quot;00&quot; &amp; TEXT( MONTH(Date_of_Birth__c)      ), 2 ), /* 1900–1999 */
+            20, RIGHT( &quot;00&quot; &amp; TEXT( MONTH(Date_of_Birth__c) + 20 ), 2 ), /* 2000–2099 */
+            21, RIGHT( &quot;00&quot; &amp; TEXT( MONTH(Date_of_Birth__c) + 40 ), 2 ), /* 2100–2199 */
+            22, RIGHT( &quot;00&quot; &amp; TEXT( MONTH(Date_of_Birth__c) + 60 ), 2 ), /* 2200–2299 */
+            &quot;99&quot; /* fallback – zawsze niezgodne */
+        ),
+
+        /* 5) Dzień urodzenia ≠ DD z PESEL */
+        MID(PESEL__c, 5, 2) &lt;&gt;
+        RIGHT( &quot;00&quot; &amp; TEXT( DAY(Date_of_Birth__c) ), 2 ),
+
+        /* 6) Nieprawidłowa cyfra kontrolna PESEL */
+        VALUE( RIGHT(PESEL__c, 1) ) &lt;&gt;
+        MOD(
+            10 -
+            MOD(
+                VALUE( MID(PESEL__c, 1, 1) ) * 1 +
+                VALUE( MID(PESEL__c, 2, 1) ) * 3 +
+                VALUE( MID(PESEL__c, 3, 1) ) * 7 +
+                VALUE( MID(PESEL__c, 4, 1) ) * 9 +
+                VALUE( MID(PESEL__c, 5, 1) ) * 1 +
+                VALUE( MID(PESEL__c, 6, 1) ) * 3 +
+                VALUE( MID(PESEL__c, 7, 1) ) * 7 +
+                VALUE( MID(PESEL__c, 8, 1) ) * 9 +
+                VALUE( MID(PESEL__c, 9, 1) ) * 1 +
+                VALUE( MID(PESEL__c, 10, 1) ) * 3,
+            10
+            ),
+        10
+        ),
+
+        /* 7) Płeć z PESEL niezgodna z Gender__c (Male/Female) */
+        AND(
+            NOT(ISBLANK(TEXT(Gender__c))),
+            OR(
+                /* 10. cyfra nieparzysta → mężczyzna */
+                AND(
+                    ISPICKVAL(Gender__c, &quot;Male&quot;),
+                    MOD( VALUE( MID(PESEL__c, 10, 1) ), 2 ) &lt;&gt; 1
+                ),
+                /* 10. cyfra parzysta → kobieta */
+                AND(
+                    ISPICKVAL(Gender__c, &quot;Female&quot;),
+                    MOD( VALUE( MID(PESEL__c, 10, 1) ), 2 ) &lt;&gt; 0
+                )
+            )
+        )
+    )
+)</errorConditionFormula>
+    <errorDisplayField>PESEL__c</errorDisplayField>
+    <errorMessage>PESEL is invalid. Please verify.</errorMessage>
+</ValidationRule>
