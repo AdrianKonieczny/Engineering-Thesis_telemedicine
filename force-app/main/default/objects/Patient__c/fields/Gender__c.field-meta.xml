@@ -19,11 +19,6 @@
                 <default>false</default>
                 <label>Female</label>
             </value>
-            <value>
-                <fullName>Other</fullName>
-                <default>false</default>
-                <label>Other</label>
-            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
