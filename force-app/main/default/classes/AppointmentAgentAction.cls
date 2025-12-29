@@ -18,10 +18,7 @@ public with sharing class AppointmentAgentAction {
         public Id appointmentId;
     }
 
-    /**
-     * Metoda widoczna dla Agentforce / Flow.
-     * Pozwala AI wykonać akcję rezerwacji w systemie.
-     */
+    
     @InvocableMethod(label='Book Appointment' description='Books a telemedicine appointment for a given patient and slot')
     public static List<Result> bookAppointment(List<Request> requests) {
         List<Result> results = new List<Result>();
@@ -29,10 +26,7 @@ public with sharing class AppointmentAgentAction {
         for (Request req : requests) {
             Result res = new Result();
             try {
-                // Pobierz dane slotu
-                Slot__c slot = [SELECT Practitioner__c, Start__c, End__c FROM Slot__c WHERE Id = :req.slotId LIMIT 1];
-                
-                // Utwórz wizytę
+                Slot__c slot = [SELECT Practitioner__c, Start__c, End__c FROM Slot__c WHERE Id = :req.slotId LIMIT 1];      
                 Appointment__c appt = new Appointment__c(
                     Patient__c = req.patientId,
                     Practitioner__c = slot.Practitioner__c,
@@ -42,11 +36,9 @@ public with sharing class AppointmentAgentAction {
                 );
                 insert appt;
                 
-                // Oznacz slot jako zajęty (opcjonalnie, jeśli masz pole IsBlocked)
                 slot.IsBlocked__c = true;
                 update slot;
-
-                // Wywołaj wideo (nasz Mock)
+          
                 VideoService.createMeetingForAppointment(appt.Id);
 
                 res.status = 'Success. Appointment booked.';
