@@ -19,14 +19,17 @@ public with sharing class VideoService {
     }
 
     private static void logAction(Id recordId, String action, String details) {
-        Log__c log = new Log__c(
-            Action__c = action,
-            EntityId__c = recordId,
-            EntityType__c = 'Appointment__c',
-            Payload__c = details,
-            When__c = System.now(),
-            Actor__c = UserInfo.getUserId()
-        );
-        insert log;
-    }
+    Log__c log = new Log__c(
+        Action__c = action,
+        EntityId__c = recordId,
+        EntityType__c = 'Appointment__c',
+        
+        
+        Payload__c = SecurityUtils.maskSensitiveData(details), 
+        
+        When__c = System.now(),
+        Actor__c = UserInfo.getUserId()
+    );
+    insert log;
+}
 }
