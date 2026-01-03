@@ -45,11 +45,10 @@ public with sharing class BookByPeselAction {
             if (targetSlot == null) {
                 res.message = 'Error: Could not find a free slot at ' + req.timeString;
             } 
-            // --- TUTAJ JEST NOWA WALIDACJA ---
+            // Walidacja czasu wstecz
             else if (targetSlot.Start__c < DateTime.now()) {
                 res.message = 'Error: Cannot book a time in the past (' + req.timeString + '). Please choose a future time.';
             } 
-            // ---------------------------------
             else {
                 // 3. Tworzymy wizytę
                 Appointment__c appt = new Appointment__c(
@@ -70,7 +69,23 @@ public with sharing class BookByPeselAction {
             }
 
         } catch (Exception e) {
+            // Obsługa błędu
             res.message = 'Error: ' + e.getMessage();
+            
+            // --- START: LOGOWANIE Z MASKOWANIEM DANYCH ---
+            // Tworzymy tekst, który normalnie zawierałby PESEL (dane wrażliwe)
+            String riskyPayload = 'Failed booking for PESEL: ' + req.pesel + '. Error: ' + e.getMessage();
+            
+            Log__c errorLog = new Log__c(
+                Action__c = 'BookSlotError',
+                Actor__c = UserInfo.getUserId(),
+                When__c = DateTime.now(),
+                EntityType__c = 'Patient__c',
+                // TUTAJ UŻYWAMY TWOJEJ METODY DO MASKOWANIA:
+                Payload__c = SecurityUtils.maskSensitiveData(riskyPayload) 
+            );
+            insert errorLog;
+            // --- KONIEC LOGOWANIA ---
         }
 
         results.add(res);
