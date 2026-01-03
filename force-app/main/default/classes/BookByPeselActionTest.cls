@@ -112,4 +112,28 @@ public class BookByPeselActionTest {
         // Oczekujemy błędu o braku slotu
         System.assert(results[0].message.contains('Could not find'), 'Should return error about missing slot');
     }
+
+    @isTest
+    static void testBookingException_PatientNotFound() {
+        
+        BookByPeselAction.Request req = new BookByPeselAction.Request();
+        req.pesel = '00000000000'; 
+        req.timeString = '12:00';
+
+        Test.startTest();
+        List<BookByPeselAction.Result> results = BookByPeselAction.bookSlot(new List<BookByPeselAction.Request>{req});
+        Test.stopTest();
+        
+        System.assert(results != null && !results.isEmpty(), 'Result list should not be empty');
+        System.assert(results[0].message.contains('Error'), 'Message should indicate an error. Actual: ' + results[0].message);
+        
+
+        Log__c errorLog = [SELECT Id, Action__c, Payload__c FROM Log__c WHERE Action__c = 'BookSlotError' LIMIT 1];
+        System.assertNotEquals(null, errorLog, 'Error log should be created in catch block');
+
+        String payload = errorLog.Payload__c;
+        System.debug('Log Payload: ' + payload);
+        
+        System.assert(!payload.contains('00000000000'), 'Payload should NOT contain the raw sensitive PESEL');
+    }
 }
