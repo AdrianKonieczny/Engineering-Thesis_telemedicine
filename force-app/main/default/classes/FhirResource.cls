@@ -50,7 +50,7 @@ global with sharing class FhirResource {
     private static void handleGetPatient(String patientId, RestResponse res) {
         // 1. Sprawdzenie Zgody (zgodnie z pracą dyplomową)
         // Zakładamy, że dostęp do danych API wymaga zgody 'Medical Access' lub podobnej
-        ConsentGuard.enforceConsent(patientId, 'Medical Access');
+        ConsentGuard.enforceConsent(patientId, 'Document Access');
 
         // 2. Pobranie danych
         Patient__c pat = [SELECT Id, Name, PESEL__c, Date_of_Birth__c, Gender__c, Email__c 
