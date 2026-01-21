@@ -1,24 +1,23 @@
+/**
+ * @description Unit tests for the BookByPeselAction class.
+ * Covers positive booking flow, business validation logic (past dates, missing slots), 
+ * and error logging with security checks.
+ * @author AK
+ */
 @isTest
 public class BookByPeselActionTest {
 
     @testSetup
     static void setupData() {
-        // KROK 1: Tworzymy pacjenta, który przejdzie Twoją rygorystyczną walidację
-        // PESEL: 44051401359
-        // 440514 -> Data urodzenia: 1944-05-14
-        // 10. cyfra to '5' (nieparzysta) -> Płeć: Male
-        
         Patient__c pat = new Patient__c(
             Name = 'Test Patient',
             PESEL__c = '44051401359',
             Email__c = 'test@example.com',
-            // Dodajemy wymagane pola zgodne z logiką PESEL:
             Date_of_Birth__c = Date.newInstance(1944, 5, 14),
             Gender__c = 'Male' 
         );
         insert pat;
         
-        // KROK 2: Przygotowanie lekarza i dostępności
         Id docId = UserInfo.getUserId();
         
         Availability__c av = new Availability__c(
@@ -28,10 +27,8 @@ public class BookByPeselActionTest {
         );
         insert av;
 
-        // KROK 3: Generowanie Slotów
         List<Slot__c> slots = new List<Slot__c>();
         
-        // Slot A: Przyszłość (prawidłowy do rezerwacji)
         DateTime futureTime = DateTime.now().addHours(1); 
         slots.add(new Slot__c(
             Practitioner__c = docId,
@@ -41,7 +38,6 @@ public class BookByPeselActionTest {
             IsBlocked__c = false
         ));
         
-        // Slot B: Przeszłość (do testowania blokady rezerwacji wstecz)
         DateTime pastTime = DateTime.now().addHours(-1);
         slots.add(new Slot__c(
             Practitioner__c = docId,
@@ -54,16 +50,16 @@ public class BookByPeselActionTest {
         insert slots;
     }
 
+    /**
+     * @description Verifies that a valid request creates an appointment and returns success.
+     */
     @isTest
     static void testBookingSuccess() {
-        // Ustawiamy Mocka dla Calloutu wideo
         Test.setMock(HttpCalloutMock.class, new VideoServiceMock());
         
-        // Pobieramy slot z przyszłości
         Slot__c futureSlot = [SELECT Start__c FROM Slot__c WHERE Start__c > :DateTime.now() LIMIT 1];
         String timeStr = futureSlot.Start__c.format('HH:mm');
         
-        // Przygotowujemy request z poprawnym PESELem
         BookByPeselAction.Request req = new BookByPeselAction.Request();
         req.pesel = '44051401359';
         req.timeString = timeStr;
@@ -72,18 +68,18 @@ public class BookByPeselActionTest {
         List<BookByPeselAction.Result> results = BookByPeselAction.bookSlot(new List<BookByPeselAction.Request>{req});
         Test.stopTest();
         
-        // Weryfikacja sukcesu
         System.assert(results[0].message.contains('Success'), 'Booking should succeed. Msg: ' + results[0].message);
         
-        // Sprawdzenie czy Appointment został utworzony
         Appointment__c appt = [SELECT Id, Status__c, Patient__r.PESEL__c FROM Appointment__c LIMIT 1];
         System.assertEquals('Booked', appt.Status__c);
         System.assertEquals('44051401359', appt.Patient__r.PESEL__c);
     }
     
+    /**
+     * @description Ensures that attempting to book a slot in the past throws a validation error.
+     */
     @isTest
     static void testBookingPastDate() {
-        // Pobieramy slot z przeszłości
         Slot__c pastSlot = [SELECT Start__c FROM Slot__c WHERE Start__c < :DateTime.now() LIMIT 1];
         String timeStr = pastSlot.Start__c.format('HH:mm');
         
@@ -95,45 +91,44 @@ public class BookByPeselActionTest {
         List<BookByPeselAction.Result> results = BookByPeselAction.bookSlot(new List<BookByPeselAction.Request>{req});
         Test.stopTest();
         
-        // Oczekujemy błędu o czasie z przeszłości
         System.assert(results[0].message.contains('past'), 'Should return error about past time. Actual: ' + results[0].message);
     }
     
+    /**
+     * @description Verifies error handling when no slot matches the requested time.
+     */
     @isTest
     static void testBookingNoSlotFound() {
         BookByPeselAction.Request req = new BookByPeselAction.Request();
         req.pesel = '44051401359';
-        req.timeString = '00:00'; // Godzina, której nie ma
+        req.timeString = '00:00';
         
         Test.startTest();
         List<BookByPeselAction.Result> results = BookByPeselAction.bookSlot(new List<BookByPeselAction.Request>{req});
         Test.stopTest();
         
-        // Oczekujemy błędu o braku slotu
         System.assert(results[0].message.contains('Could not find'), 'Should return error about missing slot');
     }
 
+    /**
+     * @description Tests exception handling (Patient not found) and verifies SECURITY requirement:
+     * Sensitive data (PESEL) must be masked in the error logs.
+     */
     @isTest
     static void testBookingException_PatientNotFound() {
-        
+        String sensitivePesel = '00000000000';
         BookByPeselAction.Request req = new BookByPeselAction.Request();
-        req.pesel = '00000000000'; 
+        req.pesel = sensitivePesel; 
         req.timeString = '12:00';
 
         Test.startTest();
         List<BookByPeselAction.Result> results = BookByPeselAction.bookSlot(new List<BookByPeselAction.Request>{req});
         Test.stopTest();
         
-        System.assert(results != null && !results.isEmpty(), 'Result list should not be empty');
-        System.assert(results[0].message.contains('Error'), 'Message should indicate an error. Actual: ' + results[0].message);
+        System.assert(results[0].message.contains('Error'), 'Message should indicate an error.');
         
-
-        Log__c errorLog = [SELECT Id, Action__c, Payload__c FROM Log__c WHERE Action__c = 'BookSlotError' LIMIT 1];
+        Log__c errorLog = [SELECT Id, Payload__c FROM Log__c WHERE Action__c = 'BookSlotError' LIMIT 1];
         System.assertNotEquals(null, errorLog, 'Error log should be created in catch block');
-
-        String payload = errorLog.Payload__c;
-        System.debug('Log Payload: ' + payload);
-        
-        System.assert(!payload.contains('00000000000'), 'Payload should NOT contain the raw sensitive PESEL');
+        System.assert(!errorLog.Payload__c.contains(sensitivePesel), 'Security Breach: Payload should NOT contain raw sensitive PESEL');
     }
 }

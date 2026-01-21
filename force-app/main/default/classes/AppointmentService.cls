@@ -1,18 +1,26 @@
+/**
+ * @description Service class handling business logic for appointment bookings.
+ * @author AK
+ */
 public with sharing class AppointmentService {
 
-    // Wyjątek do obsługi błędów biznesowych
     public class AppointmentException extends Exception {}
 
+    /**
+     * @description Books an appointment for a patient identified by PESEL.
+     * Uses row locking (FOR UPDATE) to ensure data integrity during concurrent requests.
+     * @param pesel Patient's PESEL number
+     * @param timeString Requested time in 'HH:mm' format
+     */
     public static void bookSlotForPatient(String pesel, String timeString) {
         
-        // 1. Znajdź pacjenta
         List<Patient__c> patients = [SELECT Id, Name FROM Patient__c WHERE PESEL__c = :pesel LIMIT 1];
         if (patients.isEmpty()) {
             throw new AppointmentException('Patient with PESEL ' + pesel + ' not found.');
         }
         Patient__c pat = patients[0];
 
-        // 2. Znajdź sloty (Z POPRAWKĄ FOR UPDATE i BEZ ORDER BY)
+        // Query open slots using FOR UPDATE to lock records and prevent race conditions (double booking)
         List<Slot__c> slots = [
             SELECT Id, Start__c, End__c, Practitioner__c 
             FROM Slot__c 
@@ -24,7 +32,6 @@ public with sharing class AppointmentService {
 
         Slot__c targetSlot = null;
         for(Slot__c s : slots) {
-            // Dopasowanie godziny
             if(s.Start__c.format('HH:mm') == timeString || s.Start__c.format('H:mm') == timeString) {
                 targetSlot = s;
                 break;
@@ -39,7 +46,6 @@ public with sharing class AppointmentService {
             throw new AppointmentException('Cannot book a time in the past (' + timeString + ').');
         }
 
-        // 3. Tworzymy wizytę
         Appointment__c appt = new Appointment__c(
             Patient__c = pat.Id,
             Practitioner__c = targetSlot.Practitioner__c,
@@ -49,11 +55,9 @@ public with sharing class AppointmentService {
         );
         insert appt;
 
-        // 4. Aktualizujemy slot
         targetSlot.IsBlocked__c = true;
         update targetSlot;
         
-        // 5. Generujemy link wideo
         VideoService.createMeetingForAppointment(appt.Id);
     }
 }

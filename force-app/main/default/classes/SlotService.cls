@@ -1,14 +1,20 @@
+/**
+ * @description Service class responsible for calculating and generating time slots based on Practitioner availability.
+ * Handles the logic of slicing time windows into fixed duration slots while avoiding conflicts with existing appointments.
+ * @author AK
+ */
 public with sharing class SlotService {
     
-    // Stała długość wizyty dla MVP (30 min)
     private static final Integer SLOT_DURATION_MINUTES = 30;
 
     /**
-     * Metoda generująca sloty dla danego lekarza na określony dzień.
-     * Działa w trybie "on-demand" - czyści stare sloty z tego dnia i tworzy nowe.
+     * @description Generates slots for a practitioner on a specific date.
+     * Operates on a re-generation basis: existing slots for the target day are deleted 
+     * and recreated to reflect the current state of Availability and Appointments.
+     * @param practitionerId ID of the medical professional
+     * @param dayToProcess The specific date to generate slots for
      */
     public static void generateSlotsForPractitioner(Id practitionerId, Date dayToProcess) {
-        // 1. Pobierz definicje dostępności (Availability__c) lekarza na ten dzień
         List<Availability__c> availabilities = [
             SELECT Id, Start__c, End__c, Timezone__c 
             FROM Availability__c 
@@ -16,7 +22,6 @@ public with sharing class SlotService {
             AND DAY_ONLY(Start__c) = :dayToProcess
         ];
 
-        // 2. Pobierz istniejące wizyty, aby wykryć kolizje
         List<Appointment__c> existingAppointments = [
             SELECT Start__c, End__c 
             FROM Appointment__c 
@@ -27,16 +32,13 @@ public with sharing class SlotService {
 
         List<Slot__c> newSlots = new List<Slot__c>();
 
-        // 3. Główna pętla generowania
         for (Availability__c av : availabilities) {
             DateTime cursor = av.Start__c;
             DateTime endTime = av.End__c;
 
-            // Pętla while generująca sloty co 30 minut
             while (cursor.addMinutes(SLOT_DURATION_MINUTES) <= endTime) {
                 DateTime slotEnd = cursor.addMinutes(SLOT_DURATION_MINUTES);
                 
-                // Sprawdź kolizję z wizytami
                 if (!isColliding(cursor, slotEnd, existingAppointments)) {
                     newSlots.add(new Slot__c(
                         Practitioner__c = practitionerId,
@@ -47,13 +49,10 @@ public with sharing class SlotService {
                         Timezone__c = av.Timezone__c
                     ));
                 }
-                // Przesuń kursor o 30 minut
                 cursor = cursor.addMinutes(SLOT_DURATION_MINUTES);
             }
         }
 
-        // 4. Wyczyść stare sloty (re-generacja) i wstaw nowe
-        // Usuwamy tylko sloty z tego konkretnego dnia dla tego lekarza
         delete [SELECT Id FROM Slot__c WHERE Practitioner__c = :practitionerId AND DAY_ONLY(Start__c) = :dayToProcess];
         
         if (!newSlots.isEmpty()) {
@@ -61,10 +60,15 @@ public with sharing class SlotService {
         }
     }
 
-    // Pomocnicza metoda sprawdzająca czy przedział czasu nakłada się na istniejącą wizytę
+    /**
+     * @description Checks if a proposed time window overlaps with any existing appointment.
+     * @param startT Proposed start time
+     * @param endT Proposed end time
+     * @param appointments List of existing appointments to check against
+     * @return True if an overlap exists, False otherwise
+     */
     private static Boolean isColliding(DateTime startT, DateTime endT, List<Appointment__c> appointments) {
         for (Appointment__c appt : appointments) {
-            // Logika kolizji: (StartA < EndB) and (EndA > StartB)
             if ((startT < appt.End__c) && (endT > appt.Start__c)) {
                 return true;
             }

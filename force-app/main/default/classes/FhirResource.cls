@@ -1,12 +1,21 @@
+/**
+ * @description Public REST API endpoint exposing FHIR R4 compliant resources.
+ * Handles GET requests for Patient and Appointment resources with built-in consent enforcement.
+ * URL Mapping: /services/apexrest/fhir/*
+ * @author AK
+ */
 @RestResource(urlMapping='/fhir/*')
 global with sharing class FhirResource {
 
+    /**
+     * @description Main entry point for GET requests. Routes traffic based on URL path.
+     * Supports: /fhir/Patient/{id} and /fhir/Appointment/{id}
+     */
     @HttpGet
     global static void doGet() {
         RestRequest req = RestContext.request;
         RestResponse res = RestContext.response;
         
-        // Parsowanie URL, np. /services/apexrest/fhir/Patient/a01...
         String uri = req.requestURI;
         String servicePrefix = '/fhir/';
         
@@ -25,8 +34,8 @@ global with sharing class FhirResource {
             return;
         }
 
-        String resourceType = parts[0]; // Patient lub Appointment
-        String recordId = parts[1];     // ID rekordu
+        String resourceType = parts[0];
+        String recordId = parts[1];
 
         try {
             if (resourceType == 'Patient') {
@@ -38,7 +47,6 @@ global with sharing class FhirResource {
                 res.responseBody = Blob.valueOf('Resource Type Not Found');
             }
         } catch (ConsentGuard.ConsentException e) {
-            // Zgodnie z pracą: Brak zgody = 403 Forbidden
             res.statusCode = 403;
             res.responseBody = Blob.valueOf('{"resourceType": "OperationOutcome", "issue": [{"severity": "error", "code": "forbidden", "diagnostics": "' + e.getMessage() + '"}]}');
         } catch (Exception e) {
@@ -47,38 +55,34 @@ global with sharing class FhirResource {
         }
     }
 
+    /**
+     * @description Retrieving Patient data, transforming it to FHIR JSON format.
+     */
     private static void handleGetPatient(String patientId, RestResponse res) {
-        // 1. Sprawdzenie Zgody (zgodnie z pracą dyplomową)
-        // Zakładamy, że dostęp do danych API wymaga zgody 'Medical Access' lub podobnej
         ConsentGuard.enforceConsent(patientId, 'Document Access');
 
-        // 2. Pobranie danych
         Patient__c pat = [SELECT Id, Name, PESEL__c, Date_of_Birth__c, Gender__c, Email__c 
                           FROM Patient__c 
                           WHERE Id = :patientId 
                           LIMIT 1];
 
-        // 3. Budowanie JSON FHIR (uproszczony profil R4)
         Map<String, Object> fhirJson = new Map<String, Object>();
         fhirJson.put('resourceType', 'Patient');
         fhirJson.put('id', pat.Id);
         fhirJson.put('active', true);
         
-        // Name
         Map<String, Object> nameMap = new Map<String, Object>();
         nameMap.put('text', pat.Name);
-        nameMap.put('family', pat.Name); // Uproszczenie dla MVP
+        nameMap.put('family', pat.Name);
         fhirJson.put('name', new List<Object>{nameMap});
 
-        // Identifier (PESEL)
         if (pat.PESEL__c != null) {
             Map<String, Object> identifier = new Map<String, Object>();
-            identifier.put('system', 'urn:oid:2.16.840.1.113883.3.4424.1.1.616'); // OID dla PESEL
+            identifier.put('system', 'urn:oid:2.16.840.1.113883.3.4424.1.1.616'); // Polish PESEL OID
             identifier.put('value', pat.PESEL__c);
             fhirJson.put('identifier', new List<Object>{identifier});
         }
 
-        // Demographics
         if (pat.Date_of_Birth__c != null) {
             fhirJson.put('birthDate', String.valueOf(pat.Date_of_Birth__c));
         }
@@ -91,6 +95,9 @@ global with sharing class FhirResource {
         res.responseBody = Blob.valueOf(JSON.serialize(fhirJson));
     }
 
+    /**
+     * @description Retrieving Appointment data, transforming it to FHIR JSON format.
+     */
     private static void handleGetAppointment(String appointmentId, RestResponse res) {
         Appointment__c appt = [SELECT Id, Start__c, End__c, Status__c, Patient__c, Patient__r.Name, Practitioner__r.Name 
                                FROM Appointment__c 
@@ -107,10 +114,8 @@ global with sharing class FhirResource {
         fhirJson.put('end', appt.End__c);
         fhirJson.put('description', 'Telemedicine Consultation');
 
-        // Participants
         List<Object> participants = new List<Object>();
         
-        // Patient
         Map<String, Object> p1 = new Map<String, Object>();
         Map<String, Object> actor1 = new Map<String, Object>();
         actor1.put('reference', 'Patient/' + appt.Patient__c);

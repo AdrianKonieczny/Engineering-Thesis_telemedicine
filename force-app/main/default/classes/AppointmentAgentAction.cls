@@ -1,24 +1,28 @@
+/**
+ * @description Handles appointment booking logic for Agentforce integration.
+ * @author AK
+ */
 public with sharing class AppointmentAgentAction {
 
-    // Klasa wejściowa (co Agent podaje do metody)
     public class Request {
-        @InvocableVariable(label='Patient ID' description='ID of the patient booking the visit' required=true)
+        @InvocableVariable(label='Patient ID' required=true)
         public Id patientId;
         
-        @InvocableVariable(label='Slot ID' description='ID of the slot to book' required=true)
+        @InvocableVariable(label='Slot ID' required=true)
         public Id slotId;
     }
 
-    // Klasa wyjściowa (co Agent zwraca użytkownikowi)
     public class Result {
-        @InvocableVariable(label='Booking Status' description='Result of the operation')
+        @InvocableVariable(label='Booking Status')
         public String status;
         
-        @InvocableVariable(label='Appointment ID' description='ID of the created appointment')
+        @InvocableVariable(label='Appointment ID')
         public Id appointmentId;
     }
 
-    
+    /**
+     * @description Transactional method to book a slot and create an appointment.
+     */
     @InvocableMethod(label='Book Appointment' description='Books a telemedicine appointment for a given patient and slot')
     public static List<Result> bookAppointment(List<Request> requests) {
         List<Result> results = new List<Result>();
@@ -27,6 +31,7 @@ public with sharing class AppointmentAgentAction {
             Result res = new Result();
             try {
                 Slot__c slot = [SELECT Practitioner__c, Start__c, End__c FROM Slot__c WHERE Id = :req.slotId LIMIT 1];      
+                
                 Appointment__c appt = new Appointment__c(
                     Patient__c = req.patientId,
                     Practitioner__c = slot.Practitioner__c,

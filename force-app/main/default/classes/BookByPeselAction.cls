@@ -1,3 +1,7 @@
+/**
+ * @description Invocable Action allowing admins or automated flows to book slots using PESEL.
+ * @author AK
+ */
 public with sharing class BookByPeselAction {
 
     public class Request {
@@ -12,14 +16,17 @@ public with sharing class BookByPeselAction {
         public String message;
     }
 
-    @InvocableMethod(label='Book by PESEL')
+    /**
+     * @description Invokes the booking logic via AppointmentService. 
+     * Catches business exceptions and logs them securely.
+     */
+    @InvocableMethod(label='Book by PESEL' description='Books a slot for a patient identified by PESEL')
     public static List<Result> bookSlot(List<Request> requests) {
         List<Result> results = new List<Result>();
         Request req = requests[0];
         Result res = new Result();
 
         try {
-            // WYWOŁANIE NOWEJ KLASY SERWISOWEJ
             AppointmentService.bookSlotForPatient(req.pesel, req.timeString);
             
             res.message = 'Success! Appointment booked for PESEL ' + req.pesel + ' at ' + req.timeString;
@@ -27,7 +34,6 @@ public with sharing class BookByPeselAction {
         } catch (Exception e) {
             res.message = 'Error: ' + e.getMessage();
             
-            // Logowanie błędu (zostawiamy, bo to warstwa styku z użytkownikiem)
             String riskyPayload = 'Failed booking for PESEL: ' + req.pesel + '. Error: ' + e.getMessage();
             Log__c errorLog = new Log__c(
                 Action__c = 'BookSlotError',

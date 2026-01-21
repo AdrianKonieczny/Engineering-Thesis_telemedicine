@@ -1,5 +1,16 @@
+/**
+ * @description Utility class providing data sanitization methods to ensure GDPR/RODO compliance.
+ * Used primarily to scrub sensitive PII (Personally Identifiable Information) from logs and error messages.
+ * @author AK
+ */
 public with sharing class SecurityUtils {
 
+    /**
+     * @description Scans the input string for patterns resembling PESEL numbers or Email addresses
+     * and replaces them with placeholders to prevent data leaks.
+     * @param input Raw string text
+     * @return Sanitized string with PII removed
+     */
     public static String maskSensitiveData(String input) {
         if (String.isBlank(input)) return input;
 
