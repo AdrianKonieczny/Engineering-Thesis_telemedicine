@@ -1,28 +1,3 @@
 <template>
-    <lightning-quick-action-panel header="Generate Slots">
-        <div class="slds-p-around_medium">
-            <p class="slds-text-body_regular">
-                Are you sure you want to generate appointment slots based on this Availability record?
-            </p>
-            <br/>
-            <div class="slds-box slds-theme_warning slds-theme_alert-texture">
-                <p><strong>Note:</strong> Any existing empty slots for this day will be recalculated and overwritten.</p>
-            </div>
-        </div>
-        
-        <div slot="footer">
-            <lightning-button 
-                variant="neutral" 
-                label="Cancel" 
-                onclick={closeAction} 
-                class="slds-m-right_small">
-            </lightning-button>
-            <lightning-button 
-                variant="brand" 
-                label="Generate" 
-                onclick={handleGenerate} 
-                is-loading={isLoading}>
-            </lightning-button>
-        </div>
-    </lightning-quick-action-panel>
+    
 </template>
