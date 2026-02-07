@@ -126,4 +126,83 @@ public class TelemedicineControllerTest {
         
         System.assertEquals(0, resultSlots.size());
     }
+    
+    /**
+     * @description Verifies generateSlotsFromAvailability creates slots using Availability context.
+     */
+    @isTest
+    static void testGenerateSlotsFromAvailability_createsSlots() {
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'Standard User' LIMIT 1];
+        String uniqueSeed = String.valueOf(System.currentTimeMillis());
+        User doctor = new User(
+            Alias = 'doc1',
+            Email = 'doc1_' + uniqueSeed + '@testorg.com',
+            EmailEncodingKey = 'UTF-8',
+            LastName = 'DoctorOne',
+            LanguageLocaleKey = 'en_US',
+            LocaleSidKey = 'en_US',
+            ProfileId = p.Id,
+            TimeZoneSidKey = 'Europe/Warsaw',
+            UserName = 'doc1_' + uniqueSeed + '@testorg.com'
+        );
+        insert doctor;
+
+        Date futureDate = Date.today().addDays(7);
+
+        Availability__c avail = new Availability__c(
+            Practitioner__c = doctor.Id,
+            Start__c = DateTime.newInstance(futureDate, Time.newInstance(9, 0, 0, 0)),
+            End__c = DateTime.newInstance(futureDate, Time.newInstance(17, 0, 0, 0)),
+            Timezone__c = 'Europe/Warsaw'
+        );
+        insert avail;
+
+        Integer beforeCount = [
+            SELECT COUNT()
+            FROM Slot__c
+            WHERE Practitioner__c = :doctor.Id
+            AND CALENDAR_YEAR(Start__c) = :futureDate.year()
+            AND CALENDAR_MONTH(Start__c) = :futureDate.month()
+            AND DAY_IN_MONTH(Start__c) = :futureDate.day()
+        ];
+
+        Test.startTest();
+        TelemedicineController.generateSlotsFromAvailability(avail.Id);
+        Test.stopTest();
+
+        List<Slot__c> generated = [
+            SELECT Id, Start__c, End__c, Practitioner__c
+            FROM Slot__c
+            WHERE Practitioner__c = :doctor.Id
+            AND CALENDAR_YEAR(Start__c) = :futureDate.year()
+            AND CALENDAR_MONTH(Start__c) = :futureDate.month()
+            AND DAY_IN_MONTH(Start__c) = :futureDate.day()
+            ORDER BY Start__c ASC
+        ];
+
+        System.assertEquals(0, beforeCount, 'Precondition failed: there should be no slots before generation');
+        System.assert(generated.size() > 0, 'Expected at least one slot to be generated for the availability date');
+        for (Slot__c s : generated) {
+            System.assertEquals(doctor.Id, s.Practitioner__c, 'Slot should belong to the availability practitioner');
+            System.assertEquals(futureDate, s.Start__c.date(), 'Slot Start date should match the availability date');
+        }
+    }
+
+    /**
+     * @description Verifies generateSlotsFromAvailability throws AuraHandledException for an invalid Availability Id.
+     */
+    @isTest
+    static void testGenerateSlotsFromAvailability_invalidId_throws() {
+        Id fakeId = (Id) ('a00' + String.valueOf(Crypto.getRandomInteger()).left(12));
+        Boolean thrown = false;
+        try {
+            Test.startTest();
+            TelemedicineController.generateSlotsFromAvailability(fakeId);
+            Test.stopTest();
+        } catch (AuraHandledException e) {
+            thrown = true;
+            System.assert(e.getMessage().startsWith('Error generating slots:'), 'Should wrap errors in AuraHandledException');
+        }
+        System.assert(thrown, 'Expected AuraHandledException to be thrown for invalid availability Id');
+    }
 }
