@@ -22,4 +22,23 @@ public with sharing class TelemedicineController {
             ORDER BY Start__c ASC
         ];
     }
+
+    /**
+ * @description Generates slots directly from the Availability record context.
+ * Used by the "Generate Slots" LWC Quick Action.
+ */
+@AuraEnabled
+public static void generateSlotsFromAvailability(Id availabilityId) {
+    try {
+        Availability__c av = [
+            SELECT Practitioner__c, Start__c 
+            FROM Availability__c 
+            WHERE Id = :availabilityId 
+            LIMIT 1
+        ];       
+        SlotService.generateSlotsForPractitioner(av.Practitioner__c, av.Start__c.date());       
+    } catch (Exception e) {
+        throw new AuraHandledException('Error generating slots: ' + e.getMessage());
+    }
+}
 }
